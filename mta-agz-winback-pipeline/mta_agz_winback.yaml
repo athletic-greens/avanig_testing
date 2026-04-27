@@ -1,0 +1,59 @@
+# ====================
+# NOTEBOOK CONFIGURATION
+# ====================
+notebook:
+  enabled: true
+
+  dag:
+    # Runs every Monday at 11AM UTC — same cadence as daily_campaign_level_markov
+    prod_schedule: "0 11 * * 1"
+    dev_schedule: "0 11 * * 1"
+
+  # ====================
+  # NOTEBOOK EXECUTION
+  # ====================
+  notebook_path: models/mta_agz_winback/mta_agz_winback.ipynb
+
+  s3_bucket: ag-mlops-data-store
+
+  # Docker image URI from ECR — build from the Dockerfile in models/mta_agz_winback/
+  # Push with: docker build -t mta_agz_winback . && docker tag mta_agz_winback:latest \
+  #   147644673796.dkr.ecr.us-east-1.amazonaws.com/mta_agz_winback:latest && docker push ...
+  image_uri: 147644673796.dkr.ecr.us-east-1.amazonaws.com/mta_agz_winback:latest
+
+  # ml.m5.4xlarge (16 vCPUs) — matches daily_campaign_level_markov which runs the same loop
+  # Downgrade to ml.m5.2xlarge after confirming runtime is acceptable
+  instance_type: ml.m5.4xlarge
+
+  volume_size_gb: 30
+
+  environment:
+    AWS_DEFAULT_REGION: us-east-1
+    # Slack incoming webhook for review outcomes notification
+    # Store the actual URL in AWS Secrets Manager or SSM and inject here,
+    # or set as a plain env var for now:
+    SLACK_WEBHOOK_URL: ""   # TODO: populate via Airflow Variable or SSM
+
+  # Input/output Snowflake tables
+  io:
+    output_stage: "@TEST_ML.ML_PLATFORM_INFERENCE.ML_PLATFORM_INFERENCE_STAGE"
+    OUTPUT_TABLE_PROD: "PROD_EDG.RAW_ML_PLATFORM.MTA_AGZ_WINBACK_DAILY_ATTRIBUTION_BY_UNIFIED_ATTRIBUTION_KEY"
+    OUTPUT_TABLE_DEV: "DEV_EDG.RAW_ML_PLATFORM.MTA_AGZ_WINBACK_DAILY_ATTRIBUTION_BY_UNIFIED_ATTRIBUTION_KEY"
+    merge_keys:
+      - order_date
+      - region
+      - unified_attribution_key
+      - mta_order_type
+    # Pre-merge DELETE removes orphaned rows if attribution shifts between runs
+    delete_before_merge_keys:
+      - order_date
+      - region
+
+  # Parameters injected into the notebook via papermill
+  # SQL_CONFIG is automatically added from the mlops_conn Airflow connection
+  parameters:
+    # "rolling_35_day" = 35-day lookback from execution_date (standard weekly window)
+    # Override with a specific date e.g. "2025-03-01" for backfills
+    START_DATE: "rolling_35_day"
+    # END_DATE defaults to execution_date if not set
+    # END_DATE: "2025-04-01"

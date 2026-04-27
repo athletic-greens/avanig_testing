@@ -1,0 +1,21 @@
+# Notebook execution
+papermill==2.5.0
+jupyter==1.0.0
+nbconvert==7.16.0
+ipykernel==6.29.0
+
+# Data processing
+pandas==2.2.0
+numpy==1.26.3
+
+# Markov attribution models
+ChannelAttribution==2.1.7
+matplotlib==3.8.2  # Required by ChannelAttribution
+
+# Snowflake connectivity
+snowflake-connector-python==3.7.0
+snowflake-sqlalchemy==1.5.1
+sqlalchemy<2.0.0,>=1.4.0  # Required by snowflake-sqlalchemy 1.5.1
+
+# AWS SDK
+boto3==1.34.34
